@@ -1,6 +1,6 @@
 #include"Target.h"
 
-size_t Tracker::cellsize = 4;
+size_t Tracker::cellsize = 5;
 void Tracker::FrameMinus(vector<Mat> pic, int num, vector<Mat>& picout)
 {
 	int col = pic[0].cols;//图像的列，也就是x坐标，宽度
@@ -315,13 +315,15 @@ bool Tracker::ExtractTarget(vector<Mat>&pic1, vector<Mat>& Rotatematrix, vector<
 		Mat warp(Size(3, 2), CV_64FC1);
 		tmp = (Rsc*Rotatematrix[0]).inv();//初始时刻卫星的旋转矩阵，这是一个基准位置，这个值需要存一下
 		tmp = (Rsc*Rotatematrix[i])*tmp;
-		HPI = K*tmp.inv()*K.inv();
+		HPI = K*tmp.inv(DECOMP_SVD)*K.inv(DECOMP_SVD);
 		warp.at<double>(0, 0) = HPI.at<double>(0, 0);
 		warp.at<double>(0, 1) = HPI.at<double>(0, 1);
 		warp.at<double>(0, 2) = HPI.at<double>(0, 2);
 		warp.at<double>(1, 0) = HPI.at<double>(1, 0);
 		warp.at<double>(1, 1) = HPI.at<double>(1, 1);
 		warp.at<double>(1, 2) = HPI.at<double>(1, 2);
+        // std::cout << warp << std::endl;
+        // std::cout << "===========" << std::endl;
 
 		warpAffine(pictemp[i], back1, warp, back1.size(), 2);//三线性插值映射法
 		picNotMove.push_back(back1);
@@ -329,24 +331,34 @@ bool Tracker::ExtractTarget(vector<Mat>&pic1, vector<Mat>& Rotatematrix, vector<
 	//恢复之后的处理问题
 	vector<Mat> picout;
 	FrameMinus(picNotMove, cellsize, picout);
-	for (size_t i = 0; i < cellsize; i++)
-	{
-		cvtColor(picout[i], picout[i], CV_BGR2GRAY);
-	}
-	dirfilter(picout, cellsize);//进行方向滤波
-	Trace(picout, cellsize, coordinate);//找出目标在每幅图像上的近似位置
-	lastxy.push_back(coordinate[cellsize * 2 - 2]);//把初始化中最后一帧的目标坐标x坐标push进去
-	lastxy.push_back(coordinate[cellsize * 2 - 1]);//把初始化中最后一帧的目标坐标y坐标push进去
-	rotatematrix = Rotatematrix[0];
-	if (coordinate.size() == cellsize*2)
-	{
+    // for (size_t i = 0; i < picNotMove.size(); i++)
+    // {
+    //  stringstream ss;
+    //  string str;
+    //  string str1;
+    //  ss << i;
+    //  ss >> str;
+    //  str1 = "diff" + str + ".jpg";
+    //  imwrite(str1, picout[i]);
+    // }
+	// for (size_t i = 0; i < cellsize; i++)
+	// {
+	//     cvtColor(picout[i], picout[i], CV_BGR2GRAY);
+	// }
+    dirfilter(picout, cellsize);//进行方向滤波
+    Trace(picout, cellsize, coordinate);//找出目标在每幅图像上的近似位置
+    lastxy.push_back(coordinate[cellsize * 2 - 2]);//把初始化中最后一帧的目标坐标x坐标push进去
+    lastxy.push_back(coordinate[cellsize * 2 - 1]);//把初始化中最后一帧的目标坐标y坐标push进去
+    rotatematrix = Rotatematrix[0];
+    if (coordinate.size() == cellsize*2)
+    {
         last_pic = pic1[cellsize - 1].clone();
         last2_pic = pic1[cellsize - 2].clone();
         last_rot = Rotatematrix[cellsize - 1].clone();
         last2_rot = Rotatematrix[cellsize - 2].clone();
-		return true;
-	}
-	else return false;
+        return true;
+    }
+    else return false;
 }
 bool Tracker::Tracking(Mat& thisimage, double& thisx, double& thisy)
 {
@@ -475,71 +487,71 @@ cv::Mat Tracker::diffMat(cv::Mat current_pic, cv::Mat current_rot) {
     return img;
 }
 
-int main()
-{
-	cout << "开始处理" << endl;
-	/*******下面是读内存中图片与旋转矩阵之内的参数，实际中是由仿真程序直接给出*********/
-	string prefix = "sequence1-";
-	vector<Mat> RotateMatrix;
-	vector<double> coordinate;//存放前面数帧图像上目标的坐标
-	string name = "1.yml";
-	FileStorage fs(name, FileStorage::READ);
-	if (!fs.isOpened())
-	{
-		cerr << "Failed to open " << name << endl;
-		return 1;
-	}
-	for (int i = 0; i < num; i++)
-	{
-		Mat temp(Size(3, 3), CV_64FC1);
-		stringstream ss;
-		string str;
-		ss << i + 1;
-		ss >> str;
-		fs["R" + str] >> temp;
-		RotateMatrix.push_back(temp);
-	}
-	Mat frame;
-	vector<Mat> pic;
-	for (int i = 1; i <= num; i++)
-	{
-		stringstream ss;
-		string str;
-		string str1;
-		ss << i;
-		ss >> str;
-		str1 = prefix + str + ".jpg";
-		frame = imread(str1);
-		pic.push_back(frame);
-	}
-	cout << "照片读取完毕！" << endl;
-	/************以上，pic是初始化输入的图片序列，RotateMatrix为卫星旋转矩阵******************/
-	int sizex = pic[0].cols;
-	int sizey = pic[0].rows;
-	Tracker test;//建立track 类对象
-	if (test.ExtractTarget(pic, RotateMatrix,coordinate))
-	{
-		cout << "目标已捕获，当前坐标为：" << "(" << test.lastxy[0] << "," << test.lastxy[1] << ")" << endl;
-	}
-	else
-	{
-		cout << "目标未捕获，请继续读取图像！" << endl;
-	}
-	cout << "下面进入目标跟踪状态" << endl;
-	double nextx = 0, nexty = 0;
-	//这个循环是从捕获的帧数后开始，一直循环跟踪目标
-	for (int i = cellsize; i < num; i++)
-	{
-		Mat outputlast = Mat::zeros(Size(sizex, sizey), CV_8U);
-		Mat outputthis = Mat::zeros(Size(sizex, sizey), CV_8U);
-		Mat image = Mat::zeros(Size(sizex, sizey), CV_8U);
-		//下面这个是我帧差的方法决定的，这里是总共是二十帧，用帧差后的图像去搜索主要是为了防止有星点干扰
-		test.Rotateimage(pic[i-2], RotateMatrix[i-2], outputlast);//当前搜索图像的前两帧，隔一帧作差是为了防止目标运动过小
-		test.Rotateimage(pic[i], RotateMatrix[i], outputthis);//当前所搜索图像
-		image = outputthis - outputlast;
-		cvtColor(image, image, CV_BGR2GRAY);
-		test.Tracking(image, nextx, nexty);//作差后的图像，这样的话防止开小窗会有很多星点干扰
-	}
-	getchar();
-	return 0;
-}
+// int main()
+// {
+//     cout << "开始处理" << endl;
+//     [>******下面是读内存中图片与旋转矩阵之内的参数，实际中是由仿真程序直接给出********<]
+//     string prefix = "sequence1-";
+//     vector<Mat> RotateMatrix;
+//     vector<double> coordinate;//存放前面数帧图像上目标的坐标
+//     string name = "1.yml";
+//     FileStorage fs(name, FileStorage::READ);
+//     if (!fs.isOpened())
+//     {
+//         cerr << "Failed to open " << name << endl;
+//         return 1;
+//     }
+//     for (int i = 0; i < num; i++)
+//     {
+//         Mat temp(Size(3, 3), CV_64FC1);
+//         stringstream ss;
+//         string str;
+//         ss << i + 1;
+//         ss >> str;
+//         fs["R" + str] >> temp;
+//         RotateMatrix.push_back(temp);
+//     }
+//     Mat frame;
+//     vector<Mat> pic;
+//     for (int i = 1; i <= num; i++)
+//     {
+//         stringstream ss;
+//         string str;
+//         string str1;
+//         ss << i;
+//         ss >> str;
+//         str1 = prefix + str + ".jpg";
+//         frame = imread(str1);
+//         pic.push_back(frame);
+//     }
+//     cout << "照片读取完毕！" << endl;
+//     [>***********以上，pic是初始化输入的图片序列，RotateMatrix为卫星旋转矩阵*****************<]
+//     int sizex = pic[0].cols;
+//     int sizey = pic[0].rows;
+//     Tracker test;//建立track 类对象
+//     if (test.ExtractTarget(pic, RotateMatrix,coordinate))
+//     {
+//         cout << "目标已捕获，当前坐标为：" << "(" << test.lastxy[0] << "," << test.lastxy[1] << ")" << endl;
+//     }
+//     else
+//     {
+//         cout << "目标未捕获，请继续读取图像！" << endl;
+//     }
+//     cout << "下面进入目标跟踪状态" << endl;
+//     double nextx = 0, nexty = 0;
+//     //这个循环是从捕获的帧数后开始，一直循环跟踪目标
+//     for (int i = cellsize; i < num; i++)
+//     {
+//         Mat outputlast = Mat::zeros(Size(sizex, sizey), CV_8U);
+//         Mat outputthis = Mat::zeros(Size(sizex, sizey), CV_8U);
+//         Mat image = Mat::zeros(Size(sizex, sizey), CV_8U);
+//         //下面这个是我帧差的方法决定的，这里是总共是二十帧，用帧差后的图像去搜索主要是为了防止有星点干扰
+//         test.Rotateimage(pic[i-2], RotateMatrix[i-2], outputlast);//当前搜索图像的前两帧，隔一帧作差是为了防止目标运动过小
+//         test.Rotateimage(pic[i], RotateMatrix[i], outputthis);//当前所搜索图像
+//         image = outputthis - outputlast;
+//         cvtColor(image, image, CV_BGR2GRAY);
+//         test.Tracking(image, nextx, nexty);//作差后的图像，这样的话防止开小窗会有很多星点干扰
+//     }
+//     getchar();
+//     return 0;
+// }

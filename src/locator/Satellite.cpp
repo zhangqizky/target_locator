@@ -9,6 +9,9 @@ Camera::Camera() :
     Rsc(cv::Mat::eye(3, 3, CV_64F)),
     quat(cv::Scalar_<double>(1, 1, 1, 1)) 
 {
+    Rsc = (cv::Mat_<double>(3, 3) << 0, 1, 0,
+        0, 0, 1,
+        1, 0, 0);
 }
 Camera::Camera(double sizeOfPixle, int n, int m, double fx, double fy)
 {
@@ -45,6 +48,10 @@ Satellite::Satellite() :
     Rps(cv::Mat::eye(3, 3, CV_64F)),
     quat(cv::Scalar_<double>(1, 1, 1, 1))
 {}
+
+void Satellite::updatePos(const cv::Mat pos) {
+    pos.copyTo(this->position);
+}
 
 void Satellite::updateDirectionVec(const Mat dirVec)
 {

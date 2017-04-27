@@ -1,6 +1,6 @@
 #include "locator.h"
 
-size_t Locator::threshold = 4;
+size_t Locator::threshold = 5;
 
 void Locator::updatePositionAndQuat(cv::Mat pos1, cv::Scalar quat1,
         cv::Mat pos2, cv::Scalar quat2) {
@@ -21,7 +21,10 @@ cv::Mat Locator::locate(cv::Mat img1_pic, cv::Mat img2_pic) {
         m_pics2.push(img2_pic); m_rotateMat2.push(m_s2.getRotateMatrixRps());
 
         if (m_pics1.size() == threshold) {
+            std::cout << "=============" << std::endl;
+            std::cout << "Initialized" << std::endl;
             m_initialized = initialize();
+            std::cout << "Done" << std::endl;
         }
     }
     if (m_initialized) {
@@ -53,14 +56,14 @@ bool Locator::initialize() {
     std::vector<cv::Mat> pics1, rot1, pics2, rot2;
     std::vector<double> coor1, coor2;
     while (!m_pics1.empty()) {
-        pics1.push_back(m_pics1.front()); m_pics1.pop();
-        rot1.push_back(m_rotateMat1.front()); m_rotateMat1.pop();
-        pics2.push_back(m_pics2.front()); m_pics2.pop();
-        rot2.push_back(m_rotateMat2.front()); m_rotateMat2.pop();
+        pics1.push_back(m_pics1.front().clone()); m_pics1.pop();
+        rot1.push_back(m_rotateMat1.front().clone()); m_rotateMat1.pop();
+        pics2.push_back(m_pics2.front().clone()); m_pics2.pop();
+        rot2.push_back(m_rotateMat2.front().clone()); m_rotateMat2.pop();
     }
     for (size_t i = 0; i < pics1.size(); i++) {
-        m_pics1.push(pics1[i]); m_rotateMat1.push(rot1[i]);
-        m_pics2.push(pics2[i]); m_rotateMat2.push(rot2[i]);
+        m_pics1.push(pics1[i].clone()); m_rotateMat1.push(rot1[i].clone());
+        m_pics2.push(pics2[i].clone()); m_rotateMat2.push(rot2[i].clone());
     }
     bool res =  m_tracker1.ExtractTarget(pics1, rot1, coor1) &&
         m_tracker2.ExtractTarget(pics2, rot2, coor2);
