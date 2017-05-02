@@ -40,11 +40,11 @@ private:
 	void quickSort(vector<int> &vec, int l, int r);//快速排序，用在过门限阈值分割里面
 	bool Trace(vector<Mat>& pic, int num, vector<double>& coordinate);//寻找每幅图像上最亮的点并返回坐标值，检测函数，捕获目标的函数
 public:
-	Mat getRsc()
-	{
-		return Rsc;
-	}
+	Mat getRsc() const { return Rsc; }
+    cv::Mat getK() const { return K; }
+    cv::Mat getRps() const { return rotatematrix; }
 	void Rotateimage(Mat& input, Mat rotate, Mat& output);//单帧图片恢复背景旋转的函数，用于跟踪部分。参数分别为此刻动背景图片--卫星此刻旋转矩阵--静背景图片
+    void Rotateimageinv(Mat rotate);
 	//目标图像坐标提取接口函数，输入为:图像序列pic1【20张】，旋转矩阵  输出为：直接解算出的目标坐标，存储形式为{(x1,y1),(x2,y2),(x3,y3)....}
 	bool ExtractTarget(vector<Mat>&pic1, vector<Mat>& Rotatematrix, vector<double>&coordinate);//也就是师兄你说的初始化函数
 	//跟踪目标，使用了卡尔曼滤波

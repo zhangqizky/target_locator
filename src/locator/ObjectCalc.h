@@ -10,8 +10,6 @@ using namespace cv;
 // 目标位置误差以(deltaX, deltaY, deltaZ)的形式给出
 Mat calcObjPosition(const Satellite &s1, const Satellite &s2, 
         const Mat imgCoor1, const Mat imgCoor2,
-        Mat dst, 
+        Mat dst,
         const Mat imgCoorError = Mat::zeros(2, 1, CV_64F));
-Mat calcIntersection(const cv::Mat v1, const cv::Mat v2,
-        const cv::Mat p1, const cv::Mat p2);
 #endif

@@ -21,28 +21,38 @@ cv::Mat Locator::locate(cv::Mat img1_pic, cv::Mat img2_pic) {
         m_pics2.push(img2_pic); m_rotateMat2.push(m_s2.getRotateMatrixRps());
 
         if (m_pics1.size() == threshold) {
-            std::cout << "=============" << std::endl;
-            std::cout << "Initialized" << std::endl;
             m_initialized = initialize();
-            std::cout << "Done" << std::endl;
+            return cv::Mat::zeros(3, 1, CV_64F);
         }
     }
     if (m_initialized) {
         cv::Mat_<double> imgCoor1(2, 1), imgCoor2(2, 1);
-        cv::Mat objCoor;
+        imgCoor1 << 0, 0;
+        imgCoor2 << 0, 0;
+        cv::Mat objCoor = cv::Mat::zeros(3, 1, CV_64F);
         double row1, col1, row2, col2;
         cv::Mat img_diffed1 = m_tracker1.diffMat(img1_pic, m_s1.getRotateMatrixRps());
         cv::Mat img_diffed2 = m_tracker2.diffMat(img2_pic, m_s2.getRotateMatrixRps());
         if (m_tracker1.Tracking(img_diffed1, col1, row1) &&
                 m_tracker2.Tracking(img_diffed2, col2, row2)) {
+            
+            cv::Mat trans1 = (m_tracker1.getRsc() * m_tracker1.getRps()).inv(DECOMP_SVD);
+            trans1 = m_tracker1.getRsc() * m_s1.getRotateMatrixRps() * trans1;
+            trans1 = m_tracker1.getK() * trans1.inv(DECOMP_SVD) * m_tracker1.getK().inv(DECOMP_SVD);
+            trans1 = cv::Mat(trans1.inv(DECOMP_SVD), cv::Rect(0, 0, 3, 2));
+            cv::Mat trans2 = (m_tracker2.getRsc() * m_tracker2.getRps()).inv(DECOMP_SVD);
+            trans2 = m_tracker2.getRsc() * m_s2.getRotateMatrixRps() * trans2;
+            trans2 = m_tracker2.getK() * trans2.inv(DECOMP_SVD) * m_tracker2.getK().inv(DECOMP_SVD);
+            trans2 = cv::Mat(trans2.inv(DECOMP_SVD), cv::Rect(0, 0, 3, 2));
 
-            imgCoor1 << row1, col1;
-            imgCoor2 << row2, col2;
+            cv::Mat t1, t2;
+            t1 = trans1 * (cv::Mat_<double>(3, 1) << col1, row1, 1);
+            t2 = trans2 * (cv::Mat_<double>(3, 1) << col2, row2, 1);
 
-            cv::Mat error =  calcObjPosition(m_s1, m_s2, imgCoor1, imgCoor2, objCoor);
-        }
-        else {
-            objCoor = cv::Mat::zeros(3, 1, CV_64F);
+            imgCoor1 << t1.at<double>(1), t1.at<double>(0);
+            imgCoor2 << t2.at<double>(1), t2.at<double>(0);
+
+            calcObjPosition(m_s1, m_s2, imgCoor1, imgCoor2, objCoor);
         }
 
         return objCoor;

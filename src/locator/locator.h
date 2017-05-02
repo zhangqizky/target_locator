@@ -30,8 +30,8 @@ public:
     void setCameraParams(double sizeOfPixle, int n, int m, double fx, double fy = 0) {
         m_s1.setCameraParams(sizeOfPixle, n, m, fx, fy);
         m_s2.setCameraParams(sizeOfPixle, n, m, fx, fy);
-        m_tracker1.setParameter(m, n, fx, fy, m_s1.getRotateMatrixRsc());
-        m_tracker2.setParameter(m, n, fx, fy, m_s2.getRotateMatrixRsc());
+        m_tracker1.setParameter(m, n, fx / sizeOfPixle, fy / sizeOfPixle, m_s1.getRotateMatrixRsc());
+        m_tracker2.setParameter(m, n, fx / sizeOfPixle, fy / sizeOfPixle, m_s2.getRotateMatrixRsc());
     }
     cv::Mat locate(cv::Mat img1_pic, cv::Mat img2_pic);
 };

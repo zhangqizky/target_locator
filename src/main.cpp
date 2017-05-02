@@ -32,7 +32,6 @@ int main() {
     double x, y, z;
 
     cam >> sizeOfPixle >> n >> m >> fx;
-    fx /= sizeOfPixle;
     fy = fx;
     locator.setCameraParams(sizeOfPixle, n, m, fx, fy);
     int cnt = 1;
@@ -49,20 +48,20 @@ int main() {
         // std::cout << name1.str() << std::endl;
         img1 = imread(name1.str(), 0);
         img2 = imread(name2.str(), 0);
-        cv::Mat pos1 = cv::Mat_<double>(3, 1) << x1, y1, z1;
-        cv::Mat pos2 = cv::Mat_<double>(3, 1) << x2, y2, z2;
+        cv::Mat pos1 = (cv::Mat_<double>(3, 1) << x1, y1, z1);
+        cv::Mat pos2 = (cv::Mat_<double>(3, 1) << x2, y2, z2);
         cv::Scalar quat1(q11, q21, q31, q41);
         cv::Scalar quat2(q12, q22, q32, q42);
-        std::cout << quaternion2RotateMat(quat1) << std::endl;
-        std::cout << "===============" << std::endl;
         locator.updatePositionAndQuat(pos1, quat1, pos2, quat2);
         cv::Mat res = locator.locate(img1, img2);
         location << res.at<double>(0) << " " << res.at<double>(1) << " " << res.at<double>(2) << std::endl;
-        if (!checkEqual(targ, res)) {
+        // if (!checkEqual(targ, res)) {
             err << "===============" << std::endl << cnt++ << std::endl;
-            err << x << " " << y << " " << z << std::endl;
-            err << res.at<double>(0) << " " << res.at<double>(1) << " " << res.at<double>(2) << std::endl;
-        }
+
+            cv::Mat error = res - (cv::Mat_<double>(3, 1) << x, y, z);
+            // err << x << " " << y << " " << z << std::endl;
+            err << error.t() << "\t" << norm(error) << std::endl;
+        // }
     }
     
 }
