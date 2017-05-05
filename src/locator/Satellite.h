@@ -61,6 +61,9 @@ public:
     {
         c.setParams(sizeOfPixle, n, m, fx, fy);
     }
+    void setCamPos(const cv::Scalar quat) {
+        c.updateQuaternion(quat);
+    }
 
     // getters
     Mat getPosition() const { return position.clone(); }

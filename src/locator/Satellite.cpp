@@ -128,56 +128,57 @@ Mat quaternion2RotateMat(const cv::Scalar q)
                                            m20, m21, m22);
     return rotateMat;
 }
+double SIGN(double x) {return (x >= 0.0 ? 1.0 : -1.0) ;}
 
 Scalar rotataMat2Quaternion(const cv::Mat rot)
 {
-    double tr = trace(rot)(0);
-    double w, x, y, z;
-    double a[3][3];
-    for (int i = 0; i < 3; i++)
-    {
-        for (int j = 0; j < 3; j++)
-        {
-            a[i][j] = rot.at<double>(i, j);
+    double r[3][3];
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 3; j++) {
+            r[i][j] = rot.at<double>(i, j);
         }
     }
-    if (tr > 0) 
-    {
-        double s = 0.5 / sqrt(tr + 1);
-        w = 0.25 / s;
-        x = ( a[2][1]- a[1][2]) * s;
-        y = (a[0][2] - a[2][0] ) * s;
-        z = (a[1][0] - a[0][1] ) * s;
-        
-    }
-    else 
-    {
-        if ( a[0][0] > a[1][1] && a[0][0] > a[2][2] ) 
-        {
-            double s = 2 * sqrt(1+a[0][0]-a[1][1]-a[2][2]);
-            w = (a[2][1] - a[1][2]) / s;
-            x = 0.25 * s;
-            y = (a[0][1] + a[1][0] ) * s;
-            z = (a[0][2] + a[2][0] ) * s;
-        }
-        else if (a[1][1] > a[2][2])
-        {
-            double s = 2 * sqrt(1+a[1][1]-a[0][0]-a[2][2]);
-            w = (a[0][2] - a[2][0] ) / s;
-            x = (a[0][1] + a[1][0] ) / s;
-            y = 0.25 * s;
-            z = (a[1][2] + a[2][1] ) / s;
-        }
-        else 
-        {
-            double s = 2 * sqrt(1 + a[2][2] - a[0][0] - a[1][1]);
-            w = (a[1][0] - a[0][1] ) / s;
-            x = (a[0][2] + a[2][0] ) / s;
-            y = (a[1][2] + a[2][1] ) / s;
-            z = 0.25 * s;
-        }
+    double q0, q1, q2, q3;
+    q0 = (r[0][0] + r[1][1] + r[2][2] + 1.0) / 4.0;
+    q1 = (r[0][0] - r[1][1] - r[2][2] + 1.0) / 4.0;
+    q2 = (-r[0][0] + r[1][1] - r[2][2] + 1.0) / 4.0;
+    q3 = (-r[0][0] - r[1][1] + r[2][2] + 1.0) / 4.0;
+    if (q0 < 0.0) q0 = 0.0;
+    if (q1 < 0.0) q1 = 0.0;
+    if (q2 < 0.0) q2 = 0.0;
+    if (q3 < 0.0) q3 = 0.0;
+    q0 = std::sqrt(q0);
+    q1 = std::sqrt(q1);
+    q2 = std::sqrt(q2);
+    q3 = std::sqrt(q3);
+
+    if (q0 >= q1 && q0 >= q2 && q0 >= q3) {
+        q0 *= 1.0;
+        q1 *= SIGN(r[2][1] - r[1][2]);
+        q2 *= SIGN(r[0][2] - r[2][0]);
+        q3 *= SIGN(r[1][0] - r[0][1]);
+    } else if (q1 >= q0 && q1 >= q2 && q1 >= q3) {
+        q0 *= SIGN(r[2][1] - r[1][2]);
+        q1 *= 1.0;
+        q2 *= SIGN(r[1][0] + r[0][1]);
+        q3 *= SIGN(r[0][2] + r[2][0]);
+    } else if (q2 >= q0 && q2 >= q1 && q2 >= q3) {
+        q0 *= SIGN(r[0][2] - r[2][0]);
+        q1 *= SIGN(r[1][0] + r[0][1]);
+        q2 *= 1.0;
+        q3 *= SIGN(r[2][1] + r[1][2]);
+    } else if (q3 >= q0 && q3 >= q1 && q3 >= q2) {
+        q0 *= SIGN(r[1][0] - r[0][1]);
+        q1 *= SIGN(r[2][0] + r[0][2]);
+        q2 *= SIGN(r[2][1] + r[1][2]);
+        q3 *= 1.0;
     }
 
-    Scalar_<double> q = {w, x, y, z};
-    return q;
+    double norm = sqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
+    q0 /= norm;
+    q1 /= norm;
+    q2 /= norm;
+    q3 /= norm;
+
+    return cv::Scalar_<double> (q0, q1, q2, q3);
 }

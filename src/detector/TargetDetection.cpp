@@ -275,6 +275,26 @@ bool Tracker::Trace(vector<Mat>& pic, int num, vector<double>& coordinate)
 		return false;
 	}
 }
+void Tracker::Rotateimageinv(Mat& input, Mat rotate, Mat& output)
+{
+	//Mat back1 = Mat::zeros(Size(size, size), CV_8U);//生成一个背景作为后面使用
+	Mat tmp(Size(3, 3), CV_64FC1);
+	Mat HPI(Size(3, 3), CV_64FC1);
+	Mat warp(Size(3, 2), CV_64FC1);
+
+	tmp = (Rsc*rotatematrix).inv();
+	tmp = (Rsc*rotate)*tmp;
+	HPI = K*tmp.inv()*K.inv();
+	HPI = HPI.inv();
+	warp.at<double>(0, 0) = HPI.at<double>(0, 0);
+	warp.at<double>(0, 1) = HPI.at<double>(0, 1);
+	warp.at<double>(0, 2) = (HPI.at<double>(0, 2));
+	warp.at<double>(1, 0) = HPI.at<double>(1, 0);
+	warp.at<double>(1, 1) = HPI.at<double>(1, 1);
+	warp.at<double>(1, 2) = HPI.at<double>(1, 2);
+	// cout << warp << endl;
+	warpAffine(input, output, warp, output.size(), 2);//三线性插值映射过去
+}
 void Tracker::Rotateimage(Mat& input, Mat rotate, Mat& output)
 {
 	//Mat back1 = Mat::zeros(Size(size, size), CV_8U);//生成一个背景作为后面使用
@@ -294,26 +314,6 @@ void Tracker::Rotateimage(Mat& input, Mat rotate, Mat& output)
 	warp.at<double>(1, 2) = HPI.at<double>(1, 2);
 
 	warpAffine(input, output, warp, output.size(), 2);//三线性插值映射过去
-}
-void Tracker::Rotateimageinv(Mat rotate)
-{
-	//Mat back1 = Mat::zeros(Size(size, size), CV_8U);//生成一个背景作为后面使用
-	Mat tmp(Size(3, 3), CV_64FC1);
-	Mat HPI(Size(3, 3), CV_64FC1);
-	Mat warp(Size(3, 2), CV_64FC1);
-
-	tmp = (Rsc*rotatematrix).inv();
-	tmp = (Rsc*rotate)*tmp;
-	HPI = K*tmp.inv()*K.inv();
-	HPI = HPI.inv();
-	warp.at<double>(0, 0) = HPI.at<double>(0, 0);
-	warp.at<double>(0, 1) = HPI.at<double>(0, 1);
-	warp.at<double>(0, 2) = (HPI.at<double>(0, 2));
-	warp.at<double>(1, 0) = HPI.at<double>(1, 0);
-	warp.at<double>(1, 1) = HPI.at<double>(1, 1);
-	warp.at<double>(1, 2) = HPI.at<double>(1, 2);
-	// cout <<warp << endl;
-	// warpAffine(input, output, warp, output.size(), 2);//三线性插值映射过去
 }
 bool Tracker::ExtractTarget(vector<Mat>&pic1, vector<Mat>& Rotatematrix, vector<double>& coordinate)
 {
@@ -350,6 +350,31 @@ bool Tracker::ExtractTarget(vector<Mat>&pic1, vector<Mat>& Rotatematrix, vector<
 	vector<Mat> picout;
 	FrameMinus(picNotMove, cellsize, picout);
     dirfilter(picout, cellsize);//进行方向滤波
+    // vector<Mat> picNotMove1;
+    // picNotMove1.push_back(picout[0]);
+    // for (size_t i = 1; i < cellsize; i++)
+    // {
+    //     Mat back1 = Mat::zeros(Size(col, row), CV_8U);//生成一个背景作为后面使用
+    //     Mat tmp(Size(3, 3), CV_64FC1);
+    //     Mat HPI(Size(3, 3), CV_64FC1);
+    //     Mat warp(Size(3, 2), CV_64FC1);
+    //     tmp = (Rsc*Rotatematrix[0]).inv();//初始时刻卫星的旋转矩阵，这是一个基准位置，这个值需要存一下
+    //     tmp = (Rsc*Rotatematrix[i])*tmp;
+    //     // cout << Rsc << endl;
+    //     HPI = K*tmp.inv()*K.inv();
+    //     // cout << K << endl;
+    //     HPI = HPI.inv();
+    //     warp.at<double>(0, 0) = HPI.at<double>(0, 0);
+    //     warp.at<double>(0, 1) = HPI.at<double>(0, 1);
+    //     warp.at<double>(0, 2) = HPI.at<double>(0, 2);
+    //     warp.at<double>(1, 0) = HPI.at<double>(1, 0);
+    //     warp.at<double>(1, 1) = HPI.at<double>(1, 1);
+    //     warp.at<double>(1, 2) = HPI.at<double>(1, 2);
+    //     // cout << warp << endl;
+    //     warpAffine(picout[i], back1, warp, back1.size(), 2);//三线性插值映射法
+    //     picNotMove1.push_back(back1);
+    // }
+
     Trace(picout, cellsize, coordinate);//找出目标在每幅图像上的近似位置
     lastxy.push_back(coordinate[cellsize * 2 - 2]);//把初始化中最后一帧的目标坐标x坐标push进去
     lastxy.push_back(coordinate[cellsize * 2 - 1]);//把初始化中最后一帧的目标坐标y坐标push进去
@@ -390,7 +415,8 @@ bool Tracker::Tracking(Mat& thisimage, double& thisx, double& thisy)
 		uchar* data = thisimage.ptr<uchar>(j);
 		for (int k = templastx - 10; k < templastx + 10; k++)
 		{
-			if (data[k]>5 && j != templasty&&k != templastx)
+            if (data[k]>5 && j != templasty&&k != templastx)
+			// if (data[k]>5)
 			{
 				vec.push_back(data[k]);
 				vecpic.push_back(data[k]);
@@ -446,7 +472,7 @@ bool Tracker::Tracking(Mat& thisimage, double& thisx, double& thisy)
 		return false;
 	}
 	//初始状态值  
-	KF.statePost = *(Mat_<float>(6, 1) << lastxy[0], lastxy[1], 1.2, 0, 0, 0);
+	KF.statePost = *(Mat_<float>(6, 1) << lastxy[0], lastxy[1], 0.5, 0, 0, 0);
 	Mat prediction = KF.predict();
 	double vx = abs(thisx - lastxy[0]);
 	double vy = abs(thisy - lastxy[1]);

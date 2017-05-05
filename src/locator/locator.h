@@ -10,6 +10,7 @@
 
 class Locator {
 private:
+public:
     Satellite m_s1;
     Satellite m_s2;
     Tracker m_tracker1;
@@ -27,9 +28,11 @@ private:
 public:
     void updatePositionAndQuat(cv::Mat pos1, cv::Scalar quat1,
             cv::Mat pos2, cv::Scalar quat2);
-    void setCameraParams(double sizeOfPixle, int n, int m, double fx, double fy = 0) {
+    void setCameraParams(cv::Scalar cam_quat, double sizeOfPixle, int n, int m, double fx, double fy = 0) {
         m_s1.setCameraParams(sizeOfPixle, n, m, fx, fy);
         m_s2.setCameraParams(sizeOfPixle, n, m, fx, fy);
+        m_s1.setCamPos(cam_quat);
+        m_s2.setCamPos(cam_quat);
         m_tracker1.setParameter(m, n, fx / sizeOfPixle, fy / sizeOfPixle, m_s1.getRotateMatrixRsc());
         m_tracker2.setParameter(m, n, fx / sizeOfPixle, fy / sizeOfPixle, m_s2.getRotateMatrixRsc());
     }

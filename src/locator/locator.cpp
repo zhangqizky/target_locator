@@ -33,6 +33,10 @@ cv::Mat Locator::locate(cv::Mat img1_pic, cv::Mat img2_pic) {
         double row1, col1, row2, col2;
         cv::Mat img_diffed1 = m_tracker1.diffMat(img1_pic, m_s1.getRotateMatrixRps());
         cv::Mat img_diffed2 = m_tracker2.diffMat(img2_pic, m_s2.getRotateMatrixRps());
+        // cv::Mat inv_img_diff1 = cv::Mat::zeros(img_diffed1.rows, img_diffed1.cols, CV_64F);
+        // cv::Mat inv_img_diff2 = cv::Mat::zeros(img_diffed2.rows, img_diffed2.cols, CV_64F);
+        // m_tracker1.Rotateimageinv(img_diffed1, m_s1.getRotateMatrixRps(), inv_img_diff1);
+        // m_tracker2.Rotateimageinv(img_diffed2, m_s2.getRotateMatrixRps(), inv_img_diff2);
         if (m_tracker1.Tracking(img_diffed1, col1, row1) &&
                 m_tracker2.Tracking(img_diffed2, col2, row2)) {
             
@@ -51,6 +55,12 @@ cv::Mat Locator::locate(cv::Mat img1_pic, cv::Mat img2_pic) {
 
             imgCoor1 << t1.at<double>(1), t1.at<double>(0);
             imgCoor2 << t2.at<double>(1), t2.at<double>(0);
+            //
+            // imgCoor1 << row1, col1;
+            // imgCoor2 << row2, col2;
+
+            std::cout << imgCoor1 << "\n" << imgCoor2 << std::endl;
+            std::cout << "===================" << std::endl;
 
             calcObjPosition(m_s1, m_s2, imgCoor1, imgCoor2, objCoor);
         }

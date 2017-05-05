@@ -18,8 +18,8 @@ int main() {
     Locator locator;
     double time1, x1, y1, z1, q11, q21, q31, q41;
     double time2, x2, y2, z2, q12, q22, q32, q42;
-    double sizeOfPixle, fx, fy;
-    int n, m;
+    double sizeOfPixle = 0, fx = 0, fy = 0;
+    int n = 0, m = 0;
     cv::Mat img1, img2;
     std::string img1_name("data/images_data/sequence1-");
     std::string img2_name("data/images_data/sequence2-");
@@ -30,10 +30,16 @@ int main() {
     std::ofstream location("loc.dat");
     std::ofstream err("err.dat");
     double x, y, z;
+    
+    double q1, q2, q3, q4;
 
-    cam >> sizeOfPixle >> n >> m >> fx;
-    fy = fx;
-    locator.setCameraParams(sizeOfPixle, n, m, fx, fy);
+    cam >> q1 >> q2 >> q3 >> q4 >> sizeOfPixle >> n >> m >> fx >> fy;
+    if (std::abs(fy) < 1E-5) {
+        fy = fx;
+    }
+
+    cv::Scalar cam_quat(q1, q2, q3, q4);
+    locator.setCameraParams(cam_quat, sizeOfPixle, n, m, fx, fy);
     int cnt = 1;
     int i = 1;
     while (s1 >> time1 >> x1 >> y1 >> z1 >> q11 >> q21 >> q31 >> q41 && 
@@ -53,11 +59,15 @@ int main() {
         cv::Scalar quat1(q11, q21, q31, q41);
         cv::Scalar quat2(q12, q22, q32, q42);
         locator.updatePositionAndQuat(pos1, quat1, pos2, quat2);
+        // std::cout << locator.m_s1.getRotateMatrixRps() << "\n" << locator.m_s2.getRotateMatrixRps() << std::endl;
+        // std::cout << quat2 << std::endl;
+        // std::cout << "================" << std::endl;
+
         cv::Mat res = locator.locate(img1, img2);
         location << res.at<double>(0) << " " << res.at<double>(1) << " " << res.at<double>(2) << std::endl;
         // if (!checkEqual(targ, res)) {
             err << "===============" << std::endl << cnt++ << std::endl;
-
+            //
             cv::Mat error = res - (cv::Mat_<double>(3, 1) << x, y, z);
             // err << x << " " << y << " " << z << std::endl;
             err << error.t() << "\t" << norm(error) << std::endl;
