@@ -73,5 +73,7 @@ int main() {
             err << error.t() << "\t" << norm(error) << std::endl;
         // }
     }
+
+	getchar();
     
 }
